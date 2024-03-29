@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./DebtNFT.sol";
 
 contract SmartContractLoan is Ownable, ReentrancyGuard {
     struct Debt {
@@ -16,12 +17,14 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
         uint256 startDate;
         address[] investors;
         uint256 investorCount;
+        address nftContractAddress;
     }
 
     constructor() Ownable(msg.sender) {}
 
     mapping(uint256 => Debt) public debts;
     mapping(uint256 => mapping(address => uint256)) public investments;
+    mapping(uint256 => uint256) public debtTokenIdCounter;
     uint256 public debtCount;
 
     event DebtCreated(uint256 indexed debtId, uint256 amount, uint256 interestRate, uint256 term);
@@ -29,6 +32,7 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
     event LoanDisbursed(uint256 indexed debtId, uint256 amount);
     event DepositReturned(uint256 indexed debtId, address indexed investor, uint256 amount);
     event DebtPaidOff(uint256 indexed debtId, uint256 amount);
+    event DepositWithdrawn(uint256 indexed debtId, address indexed investor, uint256 amount);
 
     function createDebt(
         uint256 _amount,
@@ -38,6 +42,7 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
         uint256 _investmentAmount
     ) external onlyOwner {
         debtCount++;
+        DebtNFT nftContract = new DebtNFT("Debt NFT", "DEBT", address(this));
         debts[debtCount] = Debt({
             amount: _amount,
             interestRate: _interestRate,
@@ -48,7 +53,8 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
             disbursed: false,
             startDate: 0,
             investors: new address[](0),
-            investorCount: 0
+            investorCount: 0,
+            nftContractAddress : address(nftContract)
         });
         emit DebtCreated(debtCount, _amount, _interestRate, _term);
     }
@@ -65,6 +71,12 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
 
         debt.totalInvestment = debt.totalInvestment + msg.value;
         investments[_debtId][msg.sender] = investments[_debtId][msg.sender] + msg.value;
+
+        uint256 tokenId = debtTokenIdCounter[_debtId] + 1;
+        debtTokenIdCounter[_debtId] = tokenId;
+
+        DebtNFT nftContract = DebtNFT(debts[_debtId].nftContractAddress);
+        nftContract.mint(msg.sender, tokenId);
 
         emit DepositAdded(_debtId, msg.sender, msg.value);
     }
@@ -97,6 +109,32 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
                 emit DepositReturned(_debtId, investor, depositAmount);
             }
         }
+    }
+
+    function withdrawDeposit(uint256 _debtId, uint256 _tokenId) external nonReentrant {
+        Debt storage debt = debts[_debtId];
+        require(debt.disbursed == false, "Loan is already disbursed");
+        DebtNFT nftContract = DebtNFT(debt.nftContractAddress);
+
+        require(nftContract.ownerOf(_tokenId) == msg.sender, "Caller is not the owner of the NFT");
+
+        uint256 depositAmount = debt.investmentAmount;
+        require(depositAmount > 0, "No deposit found");
+
+        uint256 interest = calculateInterest(_debtId);
+        uint256 totalWithdrawal = depositAmount + interest;
+
+        debt.totalInvestment -= depositAmount;
+
+        nftContract.burn(_tokenId);
+
+        require(address(this).balance >= totalWithdrawal, "Insufficient contract balance");
+
+
+        (bool success, ) = payable(msg.sender).call{value: totalWithdrawal}("");
+        require(success, "Transfer failed");
+
+        emit DepositWithdrawn(_debtId, msg.sender, totalWithdrawal);
     }
 
     function payOffDebt(uint256 _debtId) external payable nonReentrant {

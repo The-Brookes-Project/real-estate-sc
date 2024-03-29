@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 
 describe("SmartContractLoan", function () {
   let smartContractLoan;
+  let debtNFT;
   let owner;
   let investor1;
   let investor2;
@@ -125,5 +126,48 @@ describe("SmartContractLoan", function () {
 
     const debt = await smartContractLoan.debts(1);
     expect(debt.disbursed).to.equal(false);
+  });
+
+  it("should allow NFT owner to withdraw deposit after paying off the debt", async function () {
+    const amount = ethers.parseEther("100");
+    const interestRate = 1000; // 10%
+    const term = 9; // 9 months
+    const investmentAmount = ethers.parseEther("25");
+
+    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount);
+
+    const debtNFTAddress = await smartContractLoan.debts(1).then((debt) => debt.nftContractAddress);
+    debtNFT = await ethers.getContractAt("DebtNFT", debtNFTAddress);
+
+    await smartContractLoan.connect(investor1).addDeposit(1, { value: ethers.parseEther("50") });
+    await smartContractLoan.connect(investor2).addDeposit(1, { value: ethers.parseEther("50") });
+
+    expect(await debtNFT.ownerOf(1)).to.equal(investor1.address);
+    expect(await debtNFT.ownerOf(2)).to.equal(investor2.address);
+
+    await smartContractLoan.disburseLoan(1);
+
+    const interestAccrued = await smartContractLoan.calculateInterest(1);
+    const totalPayment = BigInt(amount) * BigInt(10) + BigInt(interestAccrued);
+
+    // Send additional funds to the contract to cover the withdrawal
+    await ethers.provider.send("hardhat_setBalance", [
+      smartContractLoan.runner.address,
+      ethers.toBeHex(totalPayment),
+    ]);
+
+    const oldBalance = await ethers.provider.getBalance(smartContractLoan.runner.address);
+
+    await smartContractLoan.connect(investor1).payOffDebt(1, { value: totalPayment });
+
+    const investor1BalanceBefore = await ethers.provider.getBalance(investor1.address);
+
+    await smartContractLoan.connect(investor1).withdrawDeposit(1, 1);
+
+    const investor1BalanceAfter = await ethers.provider.getBalance(investor1.address);
+
+    expect(investor1BalanceAfter - investor1BalanceBefore).to.be.closeTo(investmentAmount + interestAccrued / BigInt(2), ethers.parseEther("0.01"));
+
+    await expect(debtNFT.ownerOf(1)).to.be.reverted;
   });
 });
