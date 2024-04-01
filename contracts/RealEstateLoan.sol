@@ -5,7 +5,15 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./DebtNFT.sol";
 
+/**
+ * @title SmartContractLoan
+ * @dev A smart contract for managing real-estate debt loans and investments using NFTs.
+ */
 contract SmartContractLoan is Ownable, ReentrancyGuard {
+    address payable public feeWallet;
+    /**
+     * @dev Struct representing a debt.
+     */
     struct Debt {
         uint256 amount;
         uint256 interestRate;
@@ -20,7 +28,9 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
         address nftContractAddress;
     }
 
-    constructor() Ownable(msg.sender) {}
+    constructor(address payable _feeWallet) Ownable(msg.sender) {
+        feeWallet = _feeWallet;
+    }
 
     mapping(uint256 => Debt) public debts;
     mapping(uint256 => mapping(address => uint256)) public investments;
@@ -34,6 +44,14 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
     event DebtPaidOff(uint256 indexed debtId, uint256 amount);
     event DepositWithdrawn(uint256 indexed debtId, address indexed investor, uint256 amount);
 
+    /**
+     * @dev Creates a new debt.
+     * @param _amount The amount of the debt.
+     * @param _interestRate The interest rate of the debt.
+     * @param _term The term of the debt.
+     * @param _walletAddress The wallet address of the debt.
+     * @param _investmentAmount The investment amount required for the debt.
+     */
     function createDebt(
         uint256 _amount,
         uint256 _interestRate,
@@ -59,6 +77,10 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
         emit DebtCreated(debtCount, _amount, _interestRate, _term);
     }
 
+    /**
+     * @dev Adds a deposit to a debt, which mints the NFT representing the investment.
+     * @param _debtId The ID of the debt.
+     */
     function addDeposit(uint256 _debtId) external payable nonReentrant {
         Debt storage debt = debts[_debtId];
         require(!debt.disbursed, "Loan already disbursed");
@@ -81,14 +103,20 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
         emit DepositAdded(_debtId, msg.sender, msg.value);
     }
 
+    /**
+     * @dev Disburses a loan once the investment goal has reached. Disables users from withdrawing from the pool.
+     * @param _debtId The ID of the debt.
+     */
     function disburseLoan(uint256 _debtId) external onlyOwner nonReentrant {
         Debt storage debt = debts[_debtId];
         require(!debt.disbursed, "Loan already disbursed");
         require(debt.totalInvestment == debt.amount, "Investment goal not reached");
 
-        uint256 verseProFee = debt.totalInvestment * 2 / 100; // 2% fee
-        uint256 loanAmount = debt.totalInvestment - verseProFee;
+        uint256 versepropFee = debt.totalInvestment * 2 / 100; // 2% fee for VerseProp
+        // Transfer the fee to the fee wallet
+        feeWallet.transfer(verseProFee);
 
+        uint256 loanAmount = debt.totalInvestment - versepropFee;
         debt.walletAddress.transfer(loanAmount);
         debt.disbursed = true;
         debt.startDate = block.timestamp;
@@ -96,6 +124,10 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
         emit LoanDisbursed(_debtId, loanAmount);
     }
 
+    /**
+     * @dev Returns deposits to investors if a loan is not disbursed.
+     * @param _debtId The ID of the debt.
+     */
     function returnDeposit(uint256 _debtId) external onlyOwner nonReentrant {
         Debt storage debt = debts[_debtId];
         require(!debt.disbursed, "Loan already disbursed");
@@ -111,6 +143,11 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
         }
     }
 
+    /**
+    * @dev Withdraws a deposit and interest for an investor.
+     * @param _debtId The ID of the debt.
+     * @param _tokenId The ID of the NFT token.
+     */
     function withdrawDeposit(uint256 _debtId, uint256 _tokenId) external nonReentrant {
         Debt storage debt = debts[_debtId];
         require(debt.disbursed == false, "Loan is already disbursed");
@@ -137,6 +174,10 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
         emit DepositWithdrawn(_debtId, msg.sender, totalWithdrawal);
     }
 
+    /**
+     * @dev Pays off a debt.
+     * @param _debtId The ID of the debt.
+     */
     function payOffDebt(uint256 _debtId) external payable nonReentrant {
         Debt storage debt = debts[_debtId];
         require(debt.disbursed, "Loan not disbursed");
@@ -151,11 +192,25 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
         emit DebtPaidOff(_debtId, totalPayment);
     }
 
+    /**
+     * @dev Calculates the interest for a debt.
+     * @param _debtId The ID of the debt.
+     * @return The calculated interest.
+     */
     function calculateInterest(uint256 _debtId) public view returns (uint256) {
         Debt storage debt = debts[_debtId];
         uint256 timePassed = block.timestamp - debt.startDate;
         uint256 dailyInterest = debt.interestRate / 10000;
         uint256 interestAccrued = debt.amount * dailyInterest * timePassed / (1 days);
         return interestAccrued;
+    }
+
+    /**
+ * @dev Sets the fee wallet address.
+ * @param _feeWallet The new fee wallet address.
+ * @notice Only the contract owner can call this function.
+ */
+    function setFeeWallet(address payable _feeWallet) external onlyOwner {
+        feeWallet = _feeWallet;
     }
 }
