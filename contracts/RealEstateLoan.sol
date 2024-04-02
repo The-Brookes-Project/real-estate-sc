@@ -26,6 +26,7 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
         address[] investors;
         uint256 investorCount;
         address nftContractAddress;
+        string tokenURI;
     }
 
     constructor(address payable _feeWallet) Ownable(msg.sender) {
@@ -34,7 +35,6 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
 
     mapping(uint256 => Debt) public debts;
     mapping(uint256 => mapping(address => uint256)) public investments;
-    mapping(uint256 => uint256) public debtTokenIdCounter;
     uint256 public debtCount;
 
     event DebtCreated(uint256 indexed debtId, uint256 amount, uint256 interestRate, uint256 term);
@@ -57,7 +57,8 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
         uint256 _interestRate,
         uint256 _term,
         address payable _walletAddress,
-        uint256 _investmentAmount
+        uint256 _investmentAmount,
+        string memory _tokenURI
     ) external onlyOwner {
         debtCount++;
         DebtNFT nftContract = new DebtNFT("Debt NFT", "DEBT", address(this));
@@ -72,7 +73,8 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
             startDate: 0,
             investors: new address[](0),
             investorCount: 0,
-            nftContractAddress : address(nftContract)
+            nftContractAddress : address(nftContract),
+            tokenURI : _tokenURI
         });
         emit DebtCreated(debtCount, _amount, _interestRate, _term);
     }
@@ -94,11 +96,8 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
         debt.totalInvestment = debt.totalInvestment + msg.value;
         investments[_debtId][msg.sender] = investments[_debtId][msg.sender] + msg.value;
 
-        uint256 tokenId = debtTokenIdCounter[_debtId] + 1;
-        debtTokenIdCounter[_debtId] = tokenId;
-
         DebtNFT nftContract = DebtNFT(debts[_debtId].nftContractAddress);
-        nftContract.mint(msg.sender, tokenId);
+        nftContract.mint(msg.sender, debt.tokenURI);
 
         emit DepositAdded(_debtId, msg.sender, msg.value);
     }
@@ -114,7 +113,7 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
 
         uint256 versepropFee = debt.totalInvestment * 2 / 100; // 2% fee for VerseProp
         // Transfer the fee to the fee wallet
-        feeWallet.transfer(verseProFee);
+        feeWallet.transfer(versepropFee);
 
         uint256 loanAmount = debt.totalInvestment - versepropFee;
         debt.walletAddress.transfer(loanAmount);
@@ -206,10 +205,10 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
     }
 
     /**
- * @dev Sets the fee wallet address.
- * @param _feeWallet The new fee wallet address.
- * @notice Only the contract owner can call this function.
- */
+     * @dev Sets the fee wallet address.
+     * @param _feeWallet The new fee wallet address.
+     * @notice Only the contract owner can call this function.
+     */
     function setFeeWallet(address payable _feeWallet) external onlyOwner {
         feeWallet = _feeWallet;
     }

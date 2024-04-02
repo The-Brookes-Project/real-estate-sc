@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {ERC721URIStorage, ERC721} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 
-contract DebtNFT is ERC721, Ownable {
+contract DebtNFT is ERC721URIStorage, Ownable {
+    uint256 private _nextTokenId;
     address public loanContract;
 
     // Mapping to keep track of frozen tokens
@@ -15,9 +17,12 @@ contract DebtNFT is ERC721, Ownable {
         loanContract = _loanContract;
     }
 
-    function mint(address to, uint256 tokenId) external {
+    function mint(address to, string memory tokenURI) public returns (uint256) {
         require(msg.sender == loanContract, "Only loan contract can mint");
+        uint tokenId = _nextTokenId++;
         _mint(to, tokenId);
+        _setTokenURI(tokenId, tokenURI);
+        return tokenId;
     }
 
     function burn(uint256 tokenId) external onlyOwner {
@@ -35,12 +40,8 @@ contract DebtNFT is ERC721, Ownable {
     }
 
     // Override functions to prevent transferring of frozen tokens
-    function transferFrom(address from, address to, uint256 tokenId) public virtual override {
-        require(!_frozenTokens[tokenId], "DebtNFT: token is frozen");
-        super.transferFrom(from, to, tokenId);
-    }
-
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public virtual override {
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public virtual
+            override(ERC721, IERC721) {
         require(!_frozenTokens[tokenId], "DebtNFT: token is frozen");
         super.safeTransferFrom(from, to, tokenId, data);
     }

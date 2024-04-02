@@ -8,12 +8,14 @@ describe("SmartContractLoan", function () {
   let investor1;
   let investor2;
   let walletAddress;
+  let tokenURI = "https://verseprop-byd6bdg5exfnayd3.z02.azurefd.net/static/raven.png";
+  let versepropFeeWallet;
 
   beforeEach(async function () {
-    [owner, investor1, investor2, walletAddress] = await ethers.getSigners();
+    [owner, investor1, investor2, walletAddress, versepropFeeWallet] = await ethers.getSigners();
 
     const SmartContractLoan = await ethers.getContractFactory("SmartContractLoan");
-    smartContractLoan = await SmartContractLoan.deploy();
+    smartContractLoan = await SmartContractLoan.deploy(versepropFeeWallet);
   });
 
   it("should create a new debt", async function () {
@@ -22,7 +24,7 @@ describe("SmartContractLoan", function () {
     const term = 9; // 9 months
     const investmentAmount = ethers.parseEther("25000");
 
-    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount);
+    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount, tokenURI);
     const debt = await smartContractLoan.debts(1);
 
     expect(debt.amount).to.equal(amount);
@@ -32,6 +34,7 @@ describe("SmartContractLoan", function () {
     expect(debt.investmentAmount).to.equal(investmentAmount);
     expect(debt.totalInvestment).to.equal(0);
     expect(debt.disbursed).to.equal(false);
+    expect(debt.tokenURI).to.equal(tokenURI);
   });
 
   it("should allow investors to add deposits", async function () {
@@ -40,7 +43,7 @@ describe("SmartContractLoan", function () {
     const term = 9; // 9 months
     const investmentAmount = ethers.parseEther("25");
 
-    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount);
+    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount, tokenURI);
 
     await smartContractLoan.connect(investor1).addDeposit(1, { value: ethers.parseEther("50") });
     await smartContractLoan.connect(investor2).addDeposit(1, { value: ethers.parseEther("50") });
@@ -57,7 +60,7 @@ describe("SmartContractLoan", function () {
     const term = 9; // 9 months
     const investmentAmount = ethers.parseEther("25");
 
-    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount);
+    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount, tokenURI);
 
     await smartContractLoan.connect(investor1).addDeposit(1, { value: ethers.parseEther("50") });
     await smartContractLoan.connect(investor2).addDeposit(1, { value: ethers.parseEther("50") });
@@ -81,7 +84,7 @@ describe("SmartContractLoan", function () {
     const term = 9; // 9 months
     const investmentAmount = ethers.parseEther("25");
 
-    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount);
+    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount, tokenURI);
 
     await smartContractLoan.connect(investor1).addDeposit(1, { value: ethers.parseEther("50") });
     await smartContractLoan.connect(investor2).addDeposit(1, { value: ethers.parseEther("50") });
@@ -106,7 +109,7 @@ describe("SmartContractLoan", function () {
     const term = 9; // 9 months
     const investmentAmount = ethers.parseEther("25");
 
-    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount);
+    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount, tokenURI);
 
     await smartContractLoan.connect(investor1).addDeposit(1, { value: ethers.parseEther("50") });
     await smartContractLoan.connect(investor2).addDeposit(1, { value: ethers.parseEther("50") });
@@ -134,7 +137,7 @@ describe("SmartContractLoan", function () {
     const term = 9; // 9 months
     const investmentAmount = ethers.parseEther("25");
 
-    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount);
+    await smartContractLoan.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount, tokenURI);
 
     const debtNFTAddress = await smartContractLoan.debts(1).then((debt) => debt.nftContractAddress);
     debtNFT = await ethers.getContractAt("DebtNFT", debtNFTAddress);
@@ -142,8 +145,8 @@ describe("SmartContractLoan", function () {
     await smartContractLoan.connect(investor1).addDeposit(1, { value: ethers.parseEther("50") });
     await smartContractLoan.connect(investor2).addDeposit(1, { value: ethers.parseEther("50") });
 
-    expect(await debtNFT.ownerOf(1)).to.equal(investor1.address);
-    expect(await debtNFT.ownerOf(2)).to.equal(investor2.address);
+    expect(await debtNFT.ownerOf(0)).to.equal(investor1.address);
+    expect(await debtNFT.ownerOf(1)).to.equal(investor2.address);
 
     await smartContractLoan.disburseLoan(1);
 
@@ -162,12 +165,12 @@ describe("SmartContractLoan", function () {
 
     const investor1BalanceBefore = await ethers.provider.getBalance(investor1.address);
 
-    await smartContractLoan.connect(investor1).withdrawDeposit(1, 1);
+    await smartContractLoan.connect(investor1).withdrawDeposit(1, 0);
 
     const investor1BalanceAfter = await ethers.provider.getBalance(investor1.address);
 
     expect(investor1BalanceAfter - investor1BalanceBefore).to.be.closeTo(investmentAmount + interestAccrued / BigInt(2), ethers.parseEther("0.01"));
 
-    await expect(debtNFT.ownerOf(1)).to.be.reverted;
+    await expect(debtNFT.ownerOf(0)).to.be.reverted;
   });
 });
