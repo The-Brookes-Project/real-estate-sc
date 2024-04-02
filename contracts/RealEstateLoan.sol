@@ -44,6 +44,7 @@ contract SmartContractLoan is Ownable, ReentrancyGuard {
     event DebtPaidOff(uint256 indexed debtId, uint256 amount);
     event DepositWithdrawn(uint256 indexed debtId, address indexed investor, uint256 amount);
 
+
     /**
      * @dev Creates a new debt.
      * @param _amount The amount of the debt.
