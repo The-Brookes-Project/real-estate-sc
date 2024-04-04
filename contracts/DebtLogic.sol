@@ -288,20 +288,11 @@ contract DebtLogic is
 
         if (debt.currency == Currency.ETH) {
             require(msg.value >= totalPayment, "Insufficient payment");
-            debt.walletAddress.transfer(totalPayment);
         } else if (debt.currency == Currency.USDC) {
             IERC20 usdcToken = IERC20(ds.usdcTokenAddress());
             require(
                 usdcToken.allowance(msg.sender, address(this)) >= totalPayment,
                 "Insufficient allowance"
-            );
-            require(
-                usdcToken.transferFrom(
-                    msg.sender,
-                    debt.walletAddress,
-                    totalPayment
-                ),
-                "Transfer failed"
             );
         }
 

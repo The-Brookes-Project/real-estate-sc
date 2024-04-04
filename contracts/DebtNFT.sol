@@ -54,7 +54,7 @@ contract DebtNFT is ERC721URIStorage, DebtAccessControl {
      * @dev Burns a token, removing it from existence. Can only be called by an admin.
      * @param tokenId ID of the token to burn.
      */
-    function burn(uint256 tokenId) external onlyAdmin {
+    function burn(uint256 tokenId) external onlyAdminOrManager {
         _burn(tokenId);
     }
 

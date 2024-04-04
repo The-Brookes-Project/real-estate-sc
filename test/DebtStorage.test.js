@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const { ethers, upgrades } = require("hardhat");
+const { ethers } = require("hardhat");
 
 const { DebtStatus, Currency } = require("./utils");
 

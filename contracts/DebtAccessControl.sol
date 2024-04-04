@@ -39,6 +39,18 @@ contract DebtAccessControl is AccessControl {
     }
 
     /**
+     * @dev Modifier to restrict access to only users who have been granted the admin or manager role.
+     */
+    modifier onlyAdminOrManager() {
+        require(
+            hasRole(DEFAULT_ADMIN_ROLE, msg.sender) ||
+                hasRole(MANAGER_ROLE, msg.sender),
+            "Caller is not an admin or manager"
+        );
+        _;
+    }
+
+    /**
      * @dev Public function to grant the manager role to a specified address. Can only be called by an admin.
      * @param manager Address to be granted the manager role.
      */

@@ -78,7 +78,7 @@ describe("DebtNFT", function () {
     await debtNFT.connect(manager).mint(debtor.address, tokenURI);
 
     await expect(debtNFT.connect(regularUser).burn(0)).to.be.revertedWith(
-      "Caller is not an admin"
+      "Caller is not an admin or manager"
     );
   });
 });
