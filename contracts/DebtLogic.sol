@@ -67,7 +67,7 @@ contract DebtLogic is
         string memory _tokenURI,
         Currency _currency
     ) external onlyOwner {
-        DebtNFT nftContract = new DebtNFT("Debt NFT", "DEBT", address(this));
+        DebtNFT nftContract = new DebtNFT("Debt NFT", "DEBT", owner());
         ds.addDebt(
             DebtStorage.Debt({
                 maxAmount: _amt,
