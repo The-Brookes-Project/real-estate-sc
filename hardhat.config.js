@@ -4,15 +4,16 @@ require("@babel/register");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.24",
+  solidity: {
+    version: "0.8.24",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      }
+    },
+  },
   mocha: {
     require: ["@babel/register"]
   },
-  settings: {
-    optimizer: {
-      enabled: true,
-      runs: 200,
-    },
-    viaIR: true
-  }
 };

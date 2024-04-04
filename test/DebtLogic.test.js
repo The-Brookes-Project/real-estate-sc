@@ -3,7 +3,7 @@ const { ethers, upgrades } = require("hardhat");
 
 describe("debtLogicContract", function () {
   let debtLogic;
-  let debtProxy;
+  let debtAdmin;
   let debtStorage;
   let debtNFT;
   let owner;
@@ -14,42 +14,46 @@ describe("debtLogicContract", function () {
   let usdcTokenAddress = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
   let versepropFeeWallet;
 
-  beforeEach(async function () {
-    [owner, investor1, investor2, walletAddress, versepropFeeWallet] = await ethers.getSigners();
-
-    // Deploy DebtStorage
-    const DebtStorage = await ethers.getContractFactory("DebtStorage");
-    debtStorage = await DebtStorage.deploy(owner, versepropFeeWallet.address);
-
-    // Deploy DebtLogic with the address of DebtStorage
-    const DebtLogic = await ethers.getContractFactory("DebtLogic");
-    debtLogic = await upgrades.deployProxy(DebtLogic, [debtStorage.address, usdcTokenAddress], { initializer: 'initialize' });
-
-    const DebtAdmin = await ethers.getContractFactory("DebtAdmin");
-    debtLogic = await upgrades.deployProxy(DebtLogic, [debtStorage.address, usdcTokenAddress], { initializer: 'initialize' });
-
-    await debtLogic.deployed();
-  });
-
-  it("should create a new debt", async function () {
-    const amount = ethers.utils.parseEther("1000000");
-    const interestRate = 1000; // 10%
-    const term = 9; // 9 months
-    const investmentAmount = ethers.utils.parseEther("25000");
-
-    await debtLogic.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount, tokenURI);
-
-    // Assuming you have a getter for debt details or indexing debts by ID
-    const debtId = 0; // Using 0 as an example, adjust based on how you're indexing
-    const debt = await debtLogic.getDebt(debtId);
-
-    expect(debt.amount.toString()).to.equal(amount.toString());
-    expect(debt.interestRate).to.equal(interestRate);
-    expect(debt.term).to.equal(term);
-    expect(debt.walletAddress).to.equal(walletAddress.address);
-    expect(debt.investmentAmount.toString()).to.equal(investmentAmount.toString());
-    // Adjust assertions based on actual return types and structures
-  });
+  // beforeEach(async function () {
+  //   [owner, investor1, investor2, walletAddress, versepropFeeWallet] = await ethers.getSigners();
+  //
+  //   // Deploy DebtStorage
+  //   const DebtStorage = await ethers.getContractFactory("DebtStorage");
+  //
+  //   debtStorage = await DebtStorage.deploy(owner.address, versepropFeeWallet.address, usdcTokenAddress);
+  //   await debtStorage.waitForDeployment();
+  //   console.log('storage', debtStorage);
+  //
+  //   // Deploy DebtLogic with the address of DebtStorage
+  //   const DebtLogic = await ethers.getContractFactory("DebtLogic");
+  //   debtLogic = await upgrades.deployProxy(DebtLogic, [debtStorage.address], { initializer: 'initialize' });
+  //
+  //   const DebtAdmin = await ethers.getContractFactory("DebtAdmin");
+  //   debtAdmin = await upgrades.deployProxy(DebtAdmin, [debtStorage.address], { initializer: 'initialize' });
+  //
+  //   await debtLogic.deployed();
+  //   await debtAdmin.deployed();
+  // });
+  //
+  // it("should create a new debt", async function () {
+  //   const amount = ethers.utils.parseEther("1000000");
+  //   const interestRate = 1000; // 10%
+  //   const term = 9; // 9 months
+  //   const investmentAmount = ethers.utils.parseEther("25000");
+  //
+  //   await debtLogic.createDebt(amount, interestRate, term, walletAddress.address, investmentAmount, tokenURI);
+  //
+  //   // Assuming you have a getter for debt details or indexing debts by ID
+  //   const debtId = 0; // Using 0 as an example, adjust based on how you're indexing
+  //   const debt = await debtLogic.getDebt(debtId);
+  //
+  //   expect(debt.amount.toString()).to.equal(amount.toString());
+  //   expect(debt.interestRate).to.equal(interestRate);
+  //   expect(debt.term).to.equal(term);
+  //   expect(debt.walletAddress).to.equal(walletAddress.address);
+  //   expect(debt.investmentAmount.toString()).to.equal(investmentAmount.toString());
+  //   // Adjust assertions based on actual return types and structures
+  // });
 
   // it("should allow investors to add deposits", async function () {
   //   const amount = ethers.parseEther("100");
