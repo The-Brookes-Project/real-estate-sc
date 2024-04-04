@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./DebtAccessControl.sol";
 
 enum Currency {
     ETH,
@@ -13,8 +13,7 @@ enum DebtStatus {
     UNFUNDED
 }
 
-contract DebtStorage is AccessControl {
-    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+contract DebtStorage is DebtAccessControl {
     mapping(uint256 => Debt) public debts;
     mapping(uint256 => mapping(uint256 => uint256)) public investments;
     uint256 public debtCount;
@@ -25,24 +24,9 @@ contract DebtStorage is AccessControl {
         address _admin,
         address payable _feeWallet,
         address _usdcTokenAddress
-    ) {
-        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+    ) DebtAccessControl(_admin) {
         feeWallet = _feeWallet;
         usdcTokenAddress = _usdcTokenAddress;
-    }
-
-    // Modifier to restrict access to admin-only functions
-    modifier onlyAdmin() {
-        require(
-            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
-            "Caller is not an admin"
-        );
-        _;
-    }
-
-    modifier onlyManager() {
-        require(hasRole(MANAGER_ROLE, msg.sender), "Caller is not a manager");
-        _;
     }
 
     /**
@@ -99,21 +83,5 @@ contract DebtStorage is AccessControl {
      */
     function setFeeWallet(address payable _feeWallet) external onlyAdmin {
         feeWallet = _feeWallet;
-    }
-
-    function addManager(address _manager) public onlyAdmin {
-        grantRole(MANAGER_ROLE, _manager);
-    }
-
-    function removeManager(address _manager) public onlyAdmin {
-        revokeRole(MANAGER_ROLE, _manager);
-    }
-
-    function addAdmin(address _newAdmin) public onlyAdmin {
-        grantRole(DEFAULT_ADMIN_ROLE, _newAdmin);
-    }
-
-    function removeAdmin(address _adminToRemove) public onlyAdmin {
-        revokeRole(DEFAULT_ADMIN_ROLE, _adminToRemove);
     }
 }
