@@ -8,26 +8,26 @@ contract ReceiptToken is ERC721URIStorage, Ownable {
     uint256 private _percentageInterest;
     string private _description;
     string private _location;
-    uint256 private _value;
-    string private _landTitleRegistry;
+    string private _value;
+    string private _other;
     uint256 private _nextTokenId = 1;
 
     constructor(
         string memory name,
         string memory symbol,
-        uint256 maxSupplyArg,
-        uint256 percentageInterestArg,
-        string memory descriptionArg,
-        string memory locationArg,
-        uint256 valueArg,
-        string memory landTitleRegistryArg
+        uint256 maxSupply,
+        uint256 interest,
+        string memory description,
+        string memory location,
+        string memory value,
+        string memory other
     ) ERC721(name, symbol) Ownable(msg.sender) {
-        _maxSupply = maxSupplyArg;
-        _percentageInterest = percentageInterestArg;
-        _description = descriptionArg;
-        _location = locationArg;
-        _value = valueArg;
-        _landTitleRegistry = landTitleRegistryArg;
+        _maxSupply = maxSupply;
+        _percentageInterest = interest;
+        _description = description;
+        _location = location;
+        _value = value;
+        _other = other;
     }
 
     function mint(
@@ -70,11 +70,11 @@ contract ReceiptToken is ERC721URIStorage, Ownable {
         return _location;
     }
 
-    function value() public view returns (uint256) {
+    function value() public view returns (string memory) {
         return _value;
     }
 
-    function landTitleRegistry() public view returns (string memory) {
-        return _landTitleRegistry;
+    function other() public view returns (string memory) {
+        return _other;
     }
 }
