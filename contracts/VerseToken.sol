@@ -13,6 +13,8 @@ contract ReceiptToken is ERC721URIStorage, Ownable {
     uint256 private _nextTokenId = 1;
     string private _baseTokenURI;
 
+    event Mint(address indexed to, uint256 indexed tokenId);
+
     constructor(
         string memory name,
         string memory symbol,
@@ -46,6 +48,7 @@ contract ReceiptToken is ERC721URIStorage, Ownable {
             )
         );
         _setTokenURI(tokenId, tokenURI);
+        emit Mint(to, tokenId);
         return tokenId;
     }
 
