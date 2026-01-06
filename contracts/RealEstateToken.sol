@@ -183,7 +183,8 @@ contract SinglePropertyToken is
         require(
             _ownerOf(tokenId) == _msgSender() ||
                 isApprovedForAll(_ownerOf(tokenId), _msgSender()) ||
-                getApproved(tokenId) == _msgSender(),
+                getApproved(tokenId) == _msgSender() ||
+                hasRole(MANAGER_ROLE, _msgSender()),
             "Caller is not owner nor approved"
         );
         _currentSupply--;
